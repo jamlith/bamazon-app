@@ -18,6 +18,7 @@
   "homepage": "https://github.com/jamlith/bamazon-app#readme",
   "dependencies": {
     "cli-color": "^1.2.0",
-    "mysql": "^2.14.1"
+    "mysql": "^2.14.1",
+    "prompt": "^1.0.0"
   }
 }
