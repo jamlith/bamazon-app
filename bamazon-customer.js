@@ -1,6 +1,7 @@
 /*
  *  (bamazon):
- *      bamazon-customer.js -
+ *      bamazon-customer.js -list the products table, and allow the user to
+ *                 order those that he likes.
  *
  *-------------------------------------->8------------------------------------*/
 
@@ -12,26 +13,26 @@ var inventory_results = [];
 var item_id_list = [];
 
 
-function logArray(arr, prependLine="") {
+function logArray(arr) {
   if (arr.length < 1) {
     return false;
   } else {
-    console.log(prependLine);
     for (var i = 0; i < arr.length; i++) {
       console.log(arr[i]);
     }
-    getInput();
+    getOrder();
   }
 }
-function list_items(pw = null) {
+function list_items(pw) {
+  var li_prompt = inquirer.createPromptModule();
   var sql_pw = null;
-  if (pw == null) {
+  if (pw === null) {
     var pw_query = {
       type: "password",
       name: "sql_pw",
       message: "Password for SQL user james?"
     };
-    inquirer.prompt(pw_query).then((result) => {
+    li_prompt.prompt(pw_query).then((result) => {
       var sql_pw = result.sql_pw;
     });
   } else {
@@ -61,7 +62,8 @@ function list_items(pw = null) {
   });
   connection.end();
 }
-function get_by_id(id, pw=null) {
+function get_by_id(id, pw) {
+  var gbi_prompt = inquirer.createPromptModule();
   var sql_pw = null;
   if (pw == null) {
     var pw_query = {
@@ -69,8 +71,10 @@ function get_by_id(id, pw=null) {
       name: "sql_pw",
       message: "Password for SQL user 'james'?"
     };
-    inquirer.prompt(pw_query).then((result) => {
+    pw_prompt.prompt(pw_query).then((result) => {
         var sql_pw=result.sql_pw;
+        console.log(clc.red('PW: ') + clc.italic(sql_pw));
+        console.log(result);
     });
   } else {
     sql_pw = pw;
@@ -100,20 +104,21 @@ function get_by_id(id, pw=null) {
     }
   });
 }
-function getInput() {
+function getOrder() {
   var questions = [
   { type: "input",
     name: "id",
-    message: "Item ID #?" },
+    message: "The Item ID you'd like to order?" },
   { type: "input",
     name: "qty",
-    message: "Quantity to order??" }
+    message: "Quantity to order?",
+    default: 1 }
   ];
   inquirer.prompt(questions).then(function (answers) {
     if (item_id_list.indexOf(answers.id)) {
       get_by_id(answers.id);
     } else {
-      console.log("The specified Item ID didn't exist... please try again.")
+      console.log("The specified Item ID didn't exist... please try again.");
       // confirm: type name message default
       var relistItems = false;
       var confirmation = {
@@ -124,12 +129,28 @@ function getInput() {
       };
       inquirer.prompt(confirmation).then((resp) => {
         if (resp.relist) {
-          list_items();
+          list_items(null);
         }
       });
     }
   });
 }
-list_items();
+function init() {
+  var init_prompt = inquirer.createPromptModule();
+  var init_questions = [
+  { type: "input",
+    name: "user",
+    message: "Username:",
+    default: "james" },
+  { type: "password",
+    name: "db_pw",
+    message: "Password:",
+    default: "boc-choi" }
+  ];
+  inquirer.prompt(init_questions).then(function(resp) {
+    console.log(resp);
+  });
+}
+init();
 
 
