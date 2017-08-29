@@ -9,9 +9,14 @@ var mysql = require('mysql')
   , clc = require('cli-color')
   , inquirer = require('inquirer');
 
+var creds = {
+  uname: null,
+  pass: null
+};
+
 var inventory_results = [];
 var item_id_list = [];
-
+var logarr = [];
 
 function logArray(arr) {
   if (arr.length < 1) {
@@ -20,91 +25,64 @@ function logArray(arr) {
     for (var i = 0; i < arr.length; i++) {
       console.log(arr[i]);
     }
-    getOrder();
   }
 }
-function list_items(pw) {
-  var li_prompt = inquirer.createPromptModule();
-  var sql_pw = null;
-  if (pw === null) {
-    var pw_query = {
-      type: "password",
-      name: "sql_pw",
-      message: "Password for SQL user james?"
-    };
-    li_prompt.prompt(pw_query).then((result) => {
-      var sql_pw = result.sql_pw;
-    });
-  } else {
-    sql_pw = pw;
+function list_items() {
+  if (creds.pass === null) {
+    getCreds();
+  }
+  if (creds.uname == "" || creds.uname == null) {
+    creds.uname = "james";
   }
   var connection = mysql.createConnection({
     host: 'localhost',
-    user: 'james',
-    password: sql_pw,
+    user: creds.uname,
+    password: creds.pass,
     database: 'bamazon'
   });
-
   connection.connect();
-  connection.query('SELECT * FROM`products`', (err, results, vals) => {
-    var logarr = [];
+  connection.query('SELECT * FROM`products`', function (err, results, vals) {
     if (! err) {
       inventory_results += results;
 
-      item_id_list += results[i].id;
+      item_id_list += [ results[i].item_id ];
       for (var i = 0; i < results.length; i++) {
         logarr += [ i + ":  ID: " + results[i].item_id ];
         logarr += [ ' > ' + results[i].department_name + ' > ' + results[i].product_name ];
         logarr += [ ' > Only ' + results[i].stock_qty + ' left @ $' + results[i].price ];
       }
-      logArray(logarr);
     }
+    connection.end();
+    rcvOrder();
   });
-  connection.end();
 }
-function get_by_id(id, pw) {
-  var gbi_prompt = inquirer.createPromptModule();
-  var sql_pw = null;
-  if (pw == null) {
-    var pw_query = {
-      type: "password",
-      name: "sql_pw",
-      message: "Password for SQL user 'james'?"
-    };
-    pw_prompt.prompt(pw_query).then((result) => {
-        var sql_pw=result.sql_pw;
-        console.log(clc.red('PW: ') + clc.italic(sql_pw));
-        console.log(result);
-    });
-  } else {
-    sql_pw = pw;
-  }
+function get_by_id(id) {
+  console.log('get_by_id()...');
+  if (creds.uname === null || creds.pass === null) getCreds();
   var cxs = mysql.createConnection({
     host: 'localhost',
-    user: 'james',
-    password: sql_pw,
+    user: creds.uname,
+    password: creds.pw,
     database: "bamazon"
   });
-  cxs_state = cxs.connect();
-  console.log(cxs_state);
-  var SQL_str = 'SELECT * FROM `products` WHERE `item_id` = ' + i;
+  cxs.connect();
+  var SQL_str = 'SELECT * FROM `products` WHERE `item_id` = ' + id;
   console.log('SQL query: ' + SQL_qry);
-  cxs.query(SQL_str, (err, resp, vals) => {
-    console.log('SQL Query Returned... ' + (err) ? "Fuck, " : "No" + " errors were thrown.  " + resp.length + " record(s) were returned.");
+  cxs.query(SQL_str, function (err, resp, vals) {
+    console.log('resp recvd...');
     if (! err) {
       if (resp.length == 1) {
         console.log('SQL response was everything I could hope for...');
         return resp;
       } else if (resp.length > 1) {
-        console.log(clc.red('ERROR:') + ' After selecting a product by its unique ID, the idea that multiple records were returned has left me feeling uneasy... Unless i have duplicate records in the sample table, which is a near impossibility, something is fundamentally wrong with this application, and I already know how frustrating its going to be trying to find that needle in a haystack...');
         throw Error('Multiple records were returned with the same UNIQUE item id.');
       } else {
-        throw Error('No results for the Item ID you supplied (which seemed fine earlier?)');
+        throw Error('No results for the Item ID you supplied (which seemed fine earlier?');
       }
     }
   });
 }
-function getOrder() {
+function rcvOrder() {
   var questions = [
   { type: "input",
     name: "id",
@@ -115,42 +93,30 @@ function getOrder() {
     default: 1 }
   ];
   inquirer.prompt(questions).then(function (answers) {
-    if (item_id_list.indexOf(answers.id)) {
-      get_by_id(answers.id);
+    if (item_id_list.indexOf(answers.id) !== -1 && answers.qty > 0) {
+      var target_item = get_by_id(answers.id);
     } else {
-      console.log("The specified Item ID didn't exist... please try again.");
-      // confirm: type name message default
-      var relistItems = false;
-      var confirmation = {
-        type: "confirm",
-        name: "relist",
-        message: "Would you like to reprint the product list?",
-        default: false
-      };
-      inquirer.prompt(confirmation).then((resp) => {
-        if (resp.relist) {
-          list_items(null);
-        }
-      });
+      console.log('Invalid input... try again.');
+      list_items();
     }
   });
 }
-function init() {
-  var init_prompt = inquirer.createPromptModule();
+function getCreds() {
+  if (creds.uname === null) creds.uname = 'james';
   var init_questions = [
   { type: "input",
     name: "user",
     message: "Username:",
-    default: "james" },
+    default: creds.uname },
   { type: "password",
     name: "db_pw",
-    message: "Password:",
-    default: "boc-choi" }
+    message: "Password:" }
   ];
   inquirer.prompt(init_questions).then(function(resp) {
-    console.log(resp);
+    creds = {
+      uname: resp.user,
+      pass: resp.db_pw
+    };
   });
 }
-init();
-
-
+list_items();
