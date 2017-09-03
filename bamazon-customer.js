@@ -28,12 +28,6 @@ function logArray(arr) {
   }
 }
 function list_items() {
-  if (creds.pass === null) {
-    getCreds();
-  }
-  if (creds.uname == "" || creds.uname == null) {
-    creds.uname = "james";
-  }
   var connection = mysql.createConnection({
     host: 'localhost',
     user: creds.uname,
@@ -51,14 +45,18 @@ function list_items() {
         logarr += [ ' > ' + results[i].department_name + ' > ' + results[i].product_name ];
         logarr += [ ' > Only ' + results[i].stock_qty + ' left @ $' + results[i].price ];
       }
+      connection.end();
+      rcvOrder();
     }
-    connection.end();
-    rcvOrder();
+    else {
+      connection.end();
+      throw Error('Connection failed.')
+    }
   });
 }
 function get_by_id(id) {
   console.log('get_by_id()...');
-  if (creds.uname === null || creds.pass === null) getCreds();
+  if (creds.uname === null || creds.pass === null) creds = getCreds();
   var cxs = mysql.createConnection({
     host: 'localhost',
     user: creds.uname,
@@ -101,8 +99,9 @@ function rcvOrder() {
     }
   });
 }
-function getCreds() {
-  if (creds.uname === null) creds.uname = 'james';
+function getCreds(next) {
+  if (creds.uname !== null) next();
+  creds.uname = 'james';
   var init_questions = [
   { type: "input",
     name: "user",
@@ -113,10 +112,14 @@ function getCreds() {
     message: "Password:" }
   ];
   inquirer.prompt(init_questions).then(function(resp) {
-    creds = {
+    var userCreds = {
       uname: resp.user,
       pass: resp.db_pw
     };
+    next();
   });
 }
-list_items();
+getCreds(function() {
+  console.log(`Got creds... calling list_items`);
+  list_items();
+});
