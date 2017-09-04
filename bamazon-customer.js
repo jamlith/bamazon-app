@@ -53,9 +53,7 @@ var submitOrder = function() {
     inquirer.prompt(questions).then(function(answers) {
         if (ids.indexOf(answers.id) !== -1 && answers.qty > 0) {
             if (products[answers.id].stock_qty >= answers.qty) {
-                console.log('alls wel;');
                 var qty = products[answers.id].stock_qty - answers.qty;
-                console.log('qty: ' + qty);
                 updateTable(answers.id, qty);
             }
             else {
@@ -72,14 +70,46 @@ function updateTable(id, qty) {
     console.log(query);
     cxs.query(query, (err, resp, vals) => {
         if (!err) {
-            console.log('Order complete!');
-            getTable();
+            var total = products[id].price * (products[id].stock_qty - qty);
+            console.log(clc.white(clc.bold('Order complete!') + '  Total purchase cost: ') + clc.red(total));
+            var questions = [
+                { type: "confirm",
+                  name: "continue",
+                  message: "Submit another order?",
+                  default: true
+                }
+            ];
+            inquirer.prompt(questions).then((answers) => {
+                if (answers.continue) {
+                    getTable();
+                } else {
+                    console.log('Bye!');
+                }
+            });
+
         }
         else {
             throw Error(err);
         }
     });
+
+    cxs.end();
 }
-getTable();
 
-
+if (sql_info.user === null) {
+    var questions = [
+        { type: "input",
+          name: "un",
+          message: "SQL Username?" },
+        { type: "password",
+          name: "pw",
+          message: "SQL Password?" }
+    ];
+    inquirer.prompt(questions).then((answers) => {
+        sql_info.user = answers.un;
+        sql_info.password = answers.pw;
+        getTable();
+    });
+} else {
+    getTable();
+}
